@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 import uuid
 
 class Bus:
@@ -22,36 +22,11 @@ class Bus:
             self.available_seats.append(seat_number)
             self.available_seats.sort()
 
-    def get_bus_details(self) -> dict:
-        return {
-            "bus_id": self.bus_id,
-            "capacity": self.capacity,
-            "route": self.route,
-            "available_seats": len(self.available_seats)
-        }
-
-
 class Passenger:
-    def __init__(self, passenger_id: str, name: str, contact: str, email: str):
+    def __init__(self, passenger_id: str, name: str, contact: str):
         self.passenger_id = passenger_id
         self.name = name
         self.contact = contact
-        self.email = email
-
-    def get_passenger_details(self) -> dict:
-        return {
-            "passenger_id": self.passenger_id,
-            "name": self.name,
-            "contact": self.contact,
-            "email": self.email
-        }
-
-    def update_contact(self, new_contact: str):
-        self.contact = new_contact
-
-    def update_email(self, new_email: str):
-        self.email = new_email
-
 
 class Ticket:
     def __init__(self, ticket_id: str, passenger: Passenger, bus: Bus,
@@ -61,27 +36,19 @@ class Ticket:
         self.bus = bus
         self.seat_number = seat_number
         self.journey_date = journey_date
-        self.status = "CONFIRMED"
         self.price = price
 
-    def cancel_ticket(self):
-        if self.status != "CANCELLED":
-            self.status = "CANCELLED"
-            self.bus.cancel_seat(self.seat_number)
-            return True
-        return False
-
-    def get_ticket_details(self) -> dict:
-        return {
-            "ticket_id": self.ticket_id,
-            "passenger": self.passenger.get_passenger_details(),
-            "bus": self.bus.get_bus_details(),
-            "seat_number": self.seat_number,
-            "journey_date": self.journey_date,
-            "status": self.status,
-            "price": self.price
-        }
-
+    def print_ticket(self):
+        print("+----------------------------------------+")
+        print(f"| Ticket ID      : {self.ticket_id}")
+        print(f"| Passenger Name : {self.passenger.name}")
+        print(f"| Contact        : {self.passenger.contact}")
+        print(f"| Bus ID         : {self.bus.bus_id}")
+        print(f"| Route          : {self.bus.route}")
+        print(f"| Seat Number    : {self.seat_number}")
+        print(f"| Journey Date   : {self.journey_date}")
+        print(f"| Price          : ${self.price}")
+        print("+----------------------------------------+")
 
 class BookingSystem:
     def __init__(self):
@@ -89,98 +56,142 @@ class BookingSystem:
         self.passengers = []
         self.tickets = []
 
-    def add_bus(self, bus: Bus):
+    def add_bus(self, bus_id: str, capacity: int, route: str):
+        bus = Bus(bus_id, capacity, route)
         self.buses.append(bus)
+        print(f"Bus: {bus_id} registration successful.")
 
-    def add_passenger(self, passenger: Passenger):
+    def add_passenger(self, name: str, contact: str):
+        passenger_id = f"P{len(self.passengers) + 1:03}"
+        passenger = Passenger(passenger_id, name, contact)
         self.passengers.append(passenger)
+        print(f"Passenger: {name} registration successful. Passenger ID: {passenger_id}")
 
-    def book_ticket(self, passenger: Passenger, bus: Bus,
-                    seat_number: int, journey_date: date) -> Ticket:
-        if bus.book_seat(seat_number):
-            ticket_id = f"TKT{str(uuid.uuid4())[:8]}"
-            price = 500.0  # Sample price, can be calculated based on route
-            ticket = Ticket(ticket_id, passenger, bus, seat_number, journey_date, price)
-            self.tickets.append(ticket)
-            return ticket
-        return None
+    def list_passengers(self):
+        if not self.passengers:
+            print("No passengers registered.")
+            return
 
-    def cancel_ticket(self, ticket_id: str) -> bool:
+        print("\nRegistered Passengers:")
+        for passenger in self.passengers:
+            print(f"ID: {passenger.passenger_id}, Name: {passenger.name}, Contact: {passenger.contact}")
+
+    def book_ticket(self, passenger_id: str, bus_id: str, seat_number: int, journey_date: date):
+        passenger = next((p for p in self.passengers if p.passenger_id == passenger_id), None)
+        bus = next((b for b in self.buses if b.bus_id == bus_id), None)
+
+        if not passenger:
+            print("Error: Passenger not registered. Use '2' to register a passenger.")
+            self.list_passengers()
+            return
+
+        if not bus:
+            print("Error: Bus not registered.")
+            self.list_buses()  # Show the list of registered buses
+            return
+
+        if not bus.book_seat(seat_number):
+            print("Error: Seat not available.")
+            return
+
+        ticket_id = f"TKT{str(uuid.uuid4())[:8]}"
+        price = 500.0  # Example price
+        ticket = Ticket(ticket_id, passenger, bus, seat_number, journey_date, price)
+        self.tickets.append(ticket)
+        print("Ticket booking successful!")
+        ticket.print_ticket()
+
+    def list_buses(self):
+        if not self.buses:
+            print("No buses registered.")
+            return
+
+        print("\nRegistered Buses:")
+        for bus in self.buses:
+            print(f"ID: {bus.bus_id}, Route: {bus.route}, Capacity: {bus.capacity}, Available Seats: {len(bus.get_available_seats())}")
+
+
+    def print_all_tickets(self):
+        if not self.tickets:
+            print("No tickets to print.")
+            return
+
         for ticket in self.tickets:
-            if ticket.ticket_id == ticket_id:
-                return ticket.cancel_ticket()
-        return False
+            ticket.print_ticket()
 
-    def get_available_buses(self, journey_date: date) -> list:
-        return [bus for bus in self.buses if len(bus.get_available_seats()) > 0]
+    def close_system(self):
+        print("Closing Booking System. Have a nice day!")
 
-    def get_booking_history(self, passenger_id: str) -> list:
-        return [ticket for ticket in self.tickets
-                if ticket.passenger.passenger_id == passenger_id]
+# Login System
+OPERATORS = {
+    "ragib": "4567",
+    "yasin": "7568",
+    "mou": "0912"
+}
 
+def authenticate_operator(mock_input=None):
+    print("Welcome to the Bus Ticket Management System")
+    for _ in range(3):
+        username = mock_input["username"] if mock_input else input("Enter Operator Username: ")
+        password = mock_input["password"] if mock_input else input("Enter Operator Password: ")
 
-def main():
-    print("=== Bus Ticket Management System ===")
-    print("Initializing Booking System...")
+        if username in OPERATORS and OPERATORS[username] == password:
+            print("Authentication Successful!\n")
+            return True
 
-    # Initialize the booking system
-    booking_system = BookingSystem()
+        print("Invalid credentials. Please try again.")
 
-    # Create and add buses
-    print("\n--- Adding Buses ---")
-    bus1 = Bus("BUS001", 40, "New York - Boston")
-    bus2 = Bus("BUS002", 35, "Boston - Washington DC")
-    booking_system.add_bus(bus1)
-    booking_system.add_bus(bus2)
+    print("Too many failed attempts. Exiting system.")
+    return False
 
-    print(f"Added Bus 1: {bus1.get_bus_details()}")
-    print(f"Added Bus 2: {bus2.get_bus_details()}")
+def main(mock_inputs=None):
+    if not authenticate_operator(mock_inputs):
+        return
 
-    # Create and add passengers
-    print("\n--- Registering Passengers ---")
-    passenger1 = Passenger("P001", "John Doe", "1234567890", "john@example.com")
-    passenger2 = Passenger("P002", "Jane Smith", "0987654321", "jane@example.com")
-    booking_system.add_passenger(passenger1)
-    booking_system.add_passenger(passenger2)
+    system = BookingSystem()
 
-    print(f"Registered Passenger 1: {passenger1.get_passenger_details()}")
-    print(f"Registered Passenger 2: {passenger2.get_passenger_details()}")
+    mock_index = 0
+    while True:
+        print("\n--- Main Menu ---")
+        print("1. Register Bus")
+        print("2. Register Passenger")
+        print("3. Book Ticket")
+        print("4. Print All Tickets")
+        print("5. Exit")
 
-    # Book tickets
-    print("\n--- Booking Tickets ---")
-    journey_date = date(2024, 12, 25)
-    ticket1 = booking_system.book_ticket(passenger1, bus1, 5, journey_date)
+        choice = mock_inputs[mock_index]["choice"] if mock_inputs else input("Enter your choice: ")
+        mock_index += 1 if mock_inputs else 0
 
-    if ticket1:
-        print("✅ Ticket Booked Successfully!")
-        print("\n--- Ticket Details ---")
-        ticket_details = ticket1.get_ticket_details()
-        for key, value in ticket_details.items():
-            print(f"{key.replace('_', ' ').title()}: {value}")
+        if choice == "1":
+            bus_id = mock_inputs[mock_index]["bus_id"] if mock_inputs else input("Enter Bus ID: ")
+            capacity = int(mock_inputs[mock_index]["capacity"] if mock_inputs else input("Enter Bus Capacity: "))
+            route = mock_inputs[mock_index]["route"] if mock_inputs else input("Enter Bus Route: ")
+            system.add_bus(bus_id, capacity, route)
+            mock_index += 1 if mock_inputs else 0
 
-    # Cancel ticket
-    print("\n--- Ticket Cancellation ---")
-    if booking_system.cancel_ticket(ticket1.ticket_id):
-        print("✅ Ticket Cancelled Successfully!")
-    else:
-        print("❌ Ticket Cancellation Failed")
+        elif choice == "2":
+            name = mock_inputs[mock_index]["name"] if mock_inputs else input("Enter Passenger Name: ")
+            contact = mock_inputs[mock_index]["contact"] if mock_inputs else input("Enter Passenger Contact: ")
+            system.add_passenger(name, contact)
+            mock_index += 1 if mock_inputs else 0
 
-    # Get booking history
-    print("\n--- Booking History ---")
-    history = booking_system.get_booking_history(passenger1.passenger_id)
-    print(f"Booking History for {passenger1.name}:")
+        elif choice == "3":
+            passenger_id = mock_inputs[mock_index]["passenger_id"] if mock_inputs else input("Enter Passenger ID: ")
+            bus_id = mock_inputs[mock_index]["bus_id"] if mock_inputs else input("Enter Bus ID: ")
+            seat_number = int(mock_inputs[mock_index]["seat_number"] if mock_inputs else input("Enter Seat Number: "))
+            journey_date = date.fromisoformat(mock_inputs[mock_index]["journey_date"] if mock_inputs else input("Enter Journey Date (YYYY-MM-DD): "))
+            system.book_ticket(passenger_id, bus_id, seat_number, journey_date)
+            mock_index += 1 if mock_inputs else 0
 
-    if history:
-        for ticket in history:
-            print("\n--- Ticket Details ---")
-            ticket_details = ticket.get_ticket_details()
-            for key, value in ticket_details.items():
-                print(f"{key.replace('_', ' ').title()}: {value}")
-    else:
-        print("No booking history found.")
+        elif choice == "4":
+            system.print_all_tickets()
 
-    print("\n=== End of Booking System Demonstration ===")
+        elif choice == "5":
+            system.close_system()
+            break
 
+        else:
+            print("Invalid choice. Please try again.")
 
 if __name__ == "__main__":
     main()
